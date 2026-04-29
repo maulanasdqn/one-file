@@ -42,7 +42,6 @@
       min-height: 100vh;
     }
 
-    /* ── Header ── */
     header {
       background: var(--espresso);
       padding: 2rem 2.5rem;
@@ -190,7 +189,6 @@
       pointer-events: none
     }
 
-    /* ── Stats ── */
     .stats-bar {
       display: flex;
       gap: 1rem;
@@ -243,7 +241,6 @@
       color: #9B1C1C
     }
 
-    /* ── Table ── */
     .tbl-scroll {
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -723,22 +720,24 @@
     }
 
     db = new Surreal({engines: createWasmEngines()})
-    await db.connect('mem://')
-    await db.use({namespace: 'coffee', database: 'main'})
+    await db.connect('indxdb://brew-inventory', {namespace: 'coffee', database: 'main'})
 
-    const seed = (d) => db.query(
-      'CREATE ingredient SET name=$name, category=$category, quantity=$quantity, unit=$unit, min_stock=$min_stock',
-      d
-    )
-    await Promise.all([
-      seed({name: 'Ethiopia Yirgacheffe', category: 'beans', quantity: 2.5, unit: 'kg', min_stock: 1}),
-      seed({name: 'Colombia Huila', category: 'beans', quantity: 0.4, unit: 'kg', min_stock: 1}),
-      seed({name: 'Oat Milk', category: 'milk', quantity: 0.3, unit: 'L', min_stock: 2}),
-      seed({name: 'Whole Milk', category: 'milk', quantity: 5, unit: 'L', min_stock: 3}),
-      seed({name: 'Vanilla Syrup', category: 'syrup', quantity: 500, unit: 'ml', min_stock: 200}),
-      seed({name: 'Caramel Sauce', category: 'syrup', quantity: 80, unit: 'ml', min_stock: 150}),
-      seed({name: 'Cinnamon', category: 'spice', quantity: 120, unit: 'g', min_stock: 50}),
-    ])
+    const [[{ count }]] = await db.query('SELECT count() FROM ingredient GROUP ALL')
+    if (count === 0) {
+      const seed = (d) => db.query(
+        'CREATE ingredient SET name=$name, category=$category, quantity=$quantity, unit=$unit, min_stock=$min_stock',
+        d
+      )
+      await Promise.all([
+        seed({name: 'Ethiopia Yirgacheffe', category: 'beans', quantity: 2.5, unit: 'kg', min_stock: 1}),
+        seed({name: 'Colombia Huila', category: 'beans', quantity: 0.4, unit: 'kg', min_stock: 1}),
+        seed({name: 'Oat Milk', category: 'milk', quantity: 0.3, unit: 'L', min_stock: 2}),
+        seed({name: 'Whole Milk', category: 'milk', quantity: 5, unit: 'L', min_stock: 3}),
+        seed({name: 'Vanilla Syrup', category: 'syrup', quantity: 500, unit: 'ml', min_stock: 200}),
+        seed({name: 'Caramel Sauce', category: 'syrup', quantity: 80, unit: 'ml', min_stock: 150}),
+        seed({name: 'Cinnamon', category: 'spice', quantity: 120, unit: 'g', min_stock: 50}),
+      ])
+    }
 
     document.body.dispatchEvent(new CustomEvent('db-ready'))
   </script>
