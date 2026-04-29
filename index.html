@@ -1,11 +1,747 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>one-file</title>
+  <title>Brew Inventory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:ital,wght@0,300;0,400;0,500&family=DM+Mono&display=swap"
+    rel="stylesheet">
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --cream: #F7F0E6;
+      --parchment: #EDE4D8;
+      --espresso: #1A0F08;
+      --roast: #6B3A2A;
+      --caramel: #D4925A;
+      --border: #DFD0BE;
+      --muted: #9C7E6A;
+      --white: #FFFCF8;
+    }
+
+    html {
+      font-size: 15px
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--espresso);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--espresso);
+      padding: 2rem 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--caramel), transparent);
+      opacity: 0.5;
+    }
+
+    .hdr-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative
+    }
+
+    .eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--caramel);
+      margin-bottom: 0.4rem;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #F5E8D8;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+
+    .hdr-sub {
+      font-size: 0.82rem;
+      color: #7A6050;
+      margin-top: 0.3rem;
+      font-weight: 300;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem
+    }
+
+    /* ── Add form ── */
+    .add-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(60, 20, 5, .05);
+    }
+
+    .section-label {
+      display: block;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.67rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 0.8fr 0.7fr 0.8fr auto;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    @media (max-width: 700px) {
+      .form-row {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .form-row .btn-add {
+        grid-column: 1 / -1
+      }
+    }
+
+    input,
+    select {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      color: var(--espresso);
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      width: 100%;
+      outline: none;
+      -webkit-appearance: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input::placeholder {
+      color: var(--muted);
+      font-weight: 300
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--caramel);
+      box-shadow: 0 0 0 3px rgba(212, 146, 90, .15);
+      background: var(--white);
+    }
+
+    .btn-add {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      background: var(--espresso);
+      color: #F5E8D8;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1.4rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn-add:hover {
+      background: #2E1A10
+    }
+
+    .btn-add:active {
+      transform: scale(0.97)
+    }
+
+    .btn-add.htmx-request {
+      opacity: 0.6;
+      pointer-events: none
+    }
+
+    /* ── Stats ── */
+    .stats-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem
+    }
+
+    .stat {
+      flex: 1;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+    }
+
+    .stat-n {
+      display: block;
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--espresso);
+    }
+
+    .stat-l {
+      display: block;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.66rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .stat-warn {
+      border-color: #E9C26A;
+      background: #FFFDF5
+    }
+
+    .stat-warn .stat-n {
+      color: #92600A
+    }
+
+    .stat-danger {
+      border-color: #F0A0A0;
+      background: #FFF8F8
+    }
+
+    .stat-danger .stat-n {
+      color: #9B1C1C
+    }
+
+    /* ── Table ── */
+    .tbl-scroll {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--white);
+      box-shadow: 0 1px 4px rgba(60, 20, 5, .04);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    thead th {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.67rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+      padding: 0.85rem 1.1rem;
+      background: var(--parchment);
+      border-bottom: 1px solid var(--border);
+      font-weight: 400;
+    }
+
+    .ing-row td {
+      padding: 0.85rem 1.1rem;
+      border-bottom: 1px solid #EDE4DA;
+      vertical-align: middle;
+    }
+
+    .ing-row:last-child td {
+      border-bottom: none
+    }
+
+    .ing-row:hover td {
+      background: #FDFAF6
+    }
+
+    .cat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.25rem 0.65rem;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .col-name {
+      font-weight: 500;
+      font-size: 0.9rem
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem
+    }
+
+    .step-btn {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--cream);
+      color: var(--roast);
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      flex-shrink: 0;
+      transition: all 0.12s;
+    }
+
+    .step-btn:hover {
+      background: var(--espresso);
+      color: #F5E8D8;
+      border-color: var(--espresso)
+    }
+
+    .step-btn.htmx-request {
+      opacity: 0.5;
+      pointer-events: none
+    }
+
+    .step-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.88rem;
+      min-width: 3.5rem;
+      text-align: center;
+    }
+
+    .step-val small {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-left: 1px
+    }
+
+    .stock-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem
+    }
+
+    .stock-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      align-self: flex-start;
+    }
+
+    .stock-track {
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .stock-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.4s
+    }
+
+    .stock-min {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted)
+    }
+
+    .del-btn {
+      border: none;
+      background: transparent;
+      color: #C8B8A8;
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 0.3rem 0.4rem;
+      border-radius: 5px;
+      display: block;
+      margin: 0 auto;
+      transition: all 0.12s;
+    }
+
+    .del-btn:hover {
+      background: #FEE2E2;
+      color: #DC2626
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+
+    .empty-icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 1rem;
+      opacity: 0.4
+    }
+
+    .empty-state p {
+      font-size: 0.9rem;
+      line-height: 1.9;
+      font-weight: 300
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Hello, World!</h1>
+
+  <header>
+    <div class="hdr-inner">
+      <p class="eyebrow">Specialty Coffee</p>
+      <h1>Brew Inventory</h1>
+      <p class="hdr-sub">Track every ingredient behind the bar</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="add-card">
+      <span class="section-label">New Ingredient</span>
+      <form hx-post="/i" hx-target="#tbl-wrap" hx-swap="outerHTML" hx-on::after-request="this.reset()">
+        <div class="form-row">
+          <input name="name" placeholder="Ingredient name" required maxlength="100">
+          <select name="category" required>
+            <option value="">Category</option>
+            <option value="beans">◉ Beans</option>
+            <option value="milk">◎ Milk</option>
+            <option value="syrup">◈ Syrup</option>
+            <option value="spice">◆ Spice</option>
+            <option value="other">○ Other</option>
+          </select>
+          <input name="quantity" type="number" min="0" step="0.01" placeholder="Qty" required>
+          <select name="unit">
+            <option value="kg">kg</option>
+            <option value="g">g</option>
+            <option value="L">L</option>
+            <option value="ml">ml</option>
+            <option value="pcs">pcs</option>
+            <option value="bags">bags</option>
+          </select>
+          <input name="min_stock" type="number" min="0" step="0.01" placeholder="Min" required>
+          <button type="submit" class="btn-add">+ Add</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="tbl-wrap" hx-get="/i" hx-trigger="db-ready from:body" hx-swap="outerHTML">
+      <div class="stats-bar">
+        <div class="stat"><span class="stat-n">…</span><span class="stat-l">Loading</span></div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import {Surreal} from 'https://esm.sh/surrealdb'
+    import {createWasmEngines} from 'https://esm.sh/@surrealdb/wasm'
+
+    let db
+
+    const CATS = {
+      beans: {icon: '◉', color: '#5C3317', bg: '#F2E8DF', label: 'Beans'},
+      milk: {icon: '◎', color: '#3D6B5A', bg: '#E5F0EC', label: 'Milk'},
+      syrup: {icon: '◈', color: '#8B5E1A', bg: '#F5EDD9', label: 'Syrup'},
+      spice: {icon: '◆', color: '#2E5C3A', bg: '#DFF0E5', label: 'Spice'},
+      other: {icon: '○', color: '#5C5248', bg: '#EDE9E6', label: 'Other'},
+    }
+
+    function h(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    }
+
+    function localId(rid) {
+      if (!rid) return 'unknown'
+      if (typeof rid === 'object' && rid !== null) {
+        if (rid.id !== undefined) return String(rid.id)
+        if (rid.tb !== undefined) return String(rid)
+      }
+      const s = String(rid)
+      return s.includes(':') ? s.split(':')[1] : s
+    }
+
+    function sorted(rows) {
+      return [...rows].sort((a, b) => {
+        const cc = (a.category ?? '').localeCompare(b.category ?? '')
+        return cc !== 0 ? cc : (a.name ?? '').localeCompare(b.name ?? '')
+      })
+    }
+
+    function stock(qty, min) {
+      if (qty <= 0) return {label: 'OUT', color: '#C53030', bg: '#FFF5F5', pct: 0}
+      if (qty < min) return {label: 'LOW', color: '#C05621', bg: '#FFFAF0', pct: Math.round(qty / min * 45)}
+      if (qty < min * 2) return {label: 'OK', color: '#B7791F', bg: '#FFFFF0', pct: Math.round(50 + (qty - min) / min * 25)}
+      return {label: 'GOOD', color: '#276749', bg: '#F0FFF4', pct: 100}
+    }
+
+    function renderRow(ing) {
+      if (!ing) return ''
+      const lid = localId(ing.id)
+      const cat = CATS[ing.category] ?? CATS.other
+      const s = stock(ing.quantity, ing.min_stock)
+
+      return `<tr id="row-${h(lid)}" class="ing-row">
+  <td><span class="cat-pill" style="color:${cat.color};background:${cat.bg}">${cat.icon} ${h(cat.label)}</span></td>
+  <td class="col-name">${h(ing.name)}</td>
+  <td>
+    <div class="stepper">
+      <button class="step-btn"
+        hx-patch="/i/${h(lid)}/qty" hx-vals='{"d":-1}'
+        hx-target="#row-${h(lid)}" hx-swap="outerHTML">−</button>
+      <span class="step-val">${ing.quantity}<small>${h(ing.unit)}</small></span>
+      <button class="step-btn"
+        hx-patch="/i/${h(lid)}/qty" hx-vals='{"d":1}'
+        hx-target="#row-${h(lid)}" hx-swap="outerHTML">+</button>
+    </div>
+  </td>
+  <td>
+    <div class="stock-cell">
+      <span class="stock-tag" style="color:${s.color};background:${s.bg}">${s.label}</span>
+      <div class="stock-track"><div class="stock-fill" style="width:${s.pct}%;background:${s.color}"></div></div>
+      <span class="stock-min">min ${ing.min_stock}&thinsp;${h(ing.unit)}</span>
+    </div>
+  </td>
+  <td>
+    <button class="del-btn"
+      hx-delete="/i/${h(lid)}"
+      hx-target="#tbl-wrap" hx-swap="outerHTML"
+      hx-confirm="Remove '${h(ing.name)}' from inventory?">✕</button>
+  </td>
+</tr>`
+    }
+
+    function renderBody(rows) {
+      const low = rows.filter(i => i.quantity > 0 && i.quantity < i.min_stock).length
+      const out = rows.filter(i => i.quantity <= 0).length
+
+      const inner = rows.length === 0
+        ? `<div class="empty-state">
+        <span class="empty-icon">◎</span>
+        <p>No ingredients yet.<br>Add your first one above.</p>
+       </div>`
+        : `<div class="tbl-scroll"><table>
+        <colgroup>
+          <col style="width:130px"><col>
+          <col style="width:190px"><col style="width:160px">
+          <col style="width:44px">
+        </colgroup>
+        <thead><tr>
+          <th>Category</th><th>Ingredient</th>
+          <th>Quantity</th><th>Stock</th><th></th>
+        </tr></thead>
+        <tbody>${rows.map(renderRow).join('')}</tbody>
+      </table></div>`
+
+      return `<div id="tbl-wrap">
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-n">${rows.length}</span>
+      <span class="stat-l">Ingredients</span>
+    </div>
+    <div class="stat ${low > 0 ? 'stat-warn' : ''}">
+      <span class="stat-n">${low}</span>
+      <span class="stat-l">Low Stock</span>
+    </div>
+    <div class="stat ${out > 0 ? 'stat-danger' : ''}">
+      <span class="stat-n">${out}</span>
+      <span class="stat-l">Out of Stock</span>
+    </div>
+  </div>
+  ${inner}
+</div>`
+    }
+
+    async function allIngredients() {
+      const [rows] = await db.query('SELECT * FROM ingredient ORDER BY category, name ASC')
+      return rows ?? []
+    }
+
+    async function routeRequest(method, url, params) {
+      if (method === 'GET' && url === '/i') {
+        return renderBody(await allIngredients())
+      }
+
+      if (method === 'POST' && url === '/i') {
+        await db.query(
+          'CREATE ingredient SET name = $name, category = $category, quantity = $quantity, unit = $unit, min_stock = $min_stock',
+          {
+            name: (params.name ?? '').trim(),
+            category: params.category ?? 'other',
+            quantity: Math.max(0, parseFloat(params.quantity) || 0),
+            unit: params.unit ?? 'kg',
+            min_stock: Math.max(0, parseFloat(params.min_stock) || 0),
+          }
+        )
+        return renderBody(await allIngredients())
+      }
+
+      const qtyM = url.match(/^\/i\/([^/]+)\/qty$/)
+      if (method === 'PATCH' && qtyM) {
+        const id = qtyM[1]
+        const delta = parseFloat(params.d) || 0
+        const [[updated]] = await db.query(
+          'UPDATE type::record("ingredient", $id) SET quantity = math::max([0, quantity + $delta])',
+          {id, delta}
+        )
+        return renderRow(updated ?? null)
+      }
+
+      const delM = url.match(/^\/i\/([^/]+)$/)
+      if (method === 'DELETE' && delM) {
+        await db.query('DELETE type::record("ingredient", $id)', {id: delM[1]})
+        return renderBody(await allIngredients())
+      }
+
+      return `<div id="tbl-wrap"><div class="empty-state"><p>Unknown route: ${h(method)} ${h(url)}</p></div></div>`
+    }
+
+    const _XHR = window.XMLHttpRequest
+
+    window.XMLHttpRequest = class AppXHR {
+      onload = null; onerror = null; onabort = null
+      ontimeout = null; onprogress = null
+      onreadystatechange = null; onloadend = null; onloadstart = null
+
+      #inner = new _XHR()
+      #fake = false
+      #rl = Object.create(null)
+      #rs = 0; #st = 0; #sx = ''; #rt = ''; #ru = ''
+
+      constructor() {
+        this.#inner.onreadystatechange = () => {
+          if (this.#fake) return
+          this.onreadystatechange?.()
+        }
+          ;['load', 'error', 'abort', 'progress', 'loadend'].forEach(evt => {
+            this.#inner.addEventListener(evt, (e) => {
+              if (this.#fake) return
+              this[`on${evt}`]?.(e)
+              this.#rl[evt]?.forEach(f => f(e))
+            })
+          })
+      }
+
+      get upload() {return this.#inner.upload}
+      get readyState() {return this.#fake ? this.#rs : this.#inner.readyState}
+      get status() {return this.#fake ? this.#st : this.#inner.status}
+      get statusText() {return this.#fake ? this.#sx : this.#inner.statusText}
+      get responseText() {return this.#fake ? this.#rt : this.#inner.responseText}
+      get response() {return this.#fake ? this.#rt : this.#inner.response}
+      get responseURL() {
+        if (!this.#fake) return this.#inner.responseURL
+        const u = this.#ru
+        return u.startsWith('http') ? u : window.location.origin + u
+      }
+
+      open(method, url, async = true, u, p) {
+        this.#fake = /^\/(i)(\/.*)?$/.test(url)
+        this.#ru = url
+        this._m = method.toUpperCase()
+        this._u = url
+        if (!this.#fake) this.#inner.open(method, url, async, u, p)
+        this.#rs = 1
+      }
+
+      setRequestHeader(n, v) {if (!this.#fake) this.#inner.setRequestHeader(n, v)}
+      overrideMimeType(m) {if (!this.#fake) this.#inner.overrideMimeType(m)}
+      abort() {if (!this.#fake) this.#inner.abort()}
+      getAllResponseHeaders() {return this.#fake ? 'content-type: text/html\r\n' : this.#inner.getAllResponseHeaders()}
+      getResponseHeader(n) {return this.#fake ? (n.toLowerCase() === 'content-type' ? 'text/html' : null) : this.#inner.getResponseHeader(n)}
+
+      addEventListener(type, fn, opts) {
+        if (!this.#rl[type]) this.#rl[type] = []
+        this.#rl[type].push(fn)
+        if (!this.#fake) this.#inner.addEventListener(type, fn, opts)
+      }
+      removeEventListener(type, fn, opts) {
+        const a = this.#rl[type]; if (a) {const i = a.indexOf(fn); if (i >= 0) a.splice(i, 1)}
+        if (!this.#fake) this.#inner.removeEventListener(type, fn, opts)
+      }
+
+      send(body) {
+        if (!this.#fake) {this.#inner.send(body); return }
+
+        const p = {}
+        if (body && typeof body === 'string') {
+          try {for (const [k, v] of new URLSearchParams(body)) p[k] = v} catch { }
+        }
+
+        routeRequest(this._m, this._u, p).then(html => {
+          this.#rs = 4; this.#st = 200; this.#sx = 'OK'
+          this.#rt = html
+
+          this.onreadystatechange?.()
+          const e = new Event('load')
+          this.onload?.(e)
+          this.#rl['load']?.forEach(f => f(e))
+          this.#rl['loadend']?.forEach(f => f(new Event('loadend')))
+        }).catch(err => {
+          console.error('[AppXHR]', err)
+          this.#rs = 4; this.#st = 500
+          this.#rt = `<div id="tbl-wrap"><div class="empty-state"><p>Error: ${h(err.message)}</p></div></div>`
+          this.onload?.(new Event('load'))
+          this.#rl['load']?.forEach(f => f(new Event('load')))
+        })
+      }
+    }
+
+    db = new Surreal({engines: createWasmEngines()})
+    await db.connect('mem://')
+    await db.use({namespace: 'coffee', database: 'main'})
+
+    const seed = (d) => db.query(
+      'CREATE ingredient SET name=$name, category=$category, quantity=$quantity, unit=$unit, min_stock=$min_stock',
+      d
+    )
+    await Promise.all([
+      seed({name: 'Ethiopia Yirgacheffe', category: 'beans', quantity: 2.5, unit: 'kg', min_stock: 1}),
+      seed({name: 'Colombia Huila', category: 'beans', quantity: 0.4, unit: 'kg', min_stock: 1}),
+      seed({name: 'Oat Milk', category: 'milk', quantity: 0.3, unit: 'L', min_stock: 2}),
+      seed({name: 'Whole Milk', category: 'milk', quantity: 5, unit: 'L', min_stock: 3}),
+      seed({name: 'Vanilla Syrup', category: 'syrup', quantity: 500, unit: 'ml', min_stock: 200}),
+      seed({name: 'Caramel Sauce', category: 'syrup', quantity: 80, unit: 'ml', min_stock: 150}),
+      seed({name: 'Cinnamon', category: 'spice', quantity: 120, unit: 'g', min_stock: 50}),
+    ])
+
+    document.body.dispatchEvent(new CustomEvent('db-ready'))
+  </script>
 </body>
+
 </html>
